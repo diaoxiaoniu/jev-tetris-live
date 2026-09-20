@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jev plays Tetris — seed 20260920</title>
+<meta name="description" content="Cloud Jev (TypeSafe) plays a 50-piece Tetris game. Recorded replay, no API key.">
+<style>
+  :root {
+    --bg: #07080b;
+    --ink: #e8edf2;
+    --muted: #8b93a1;
+    --line: #1c2230;
+    --well: #0b0e14;
+    --accent: #7ee0c8;
+    --warn: #ffb86b;
+    --bad: #ff6b7a;
+    --cell: 22px;
+    --gap: 2px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body {
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    min-height: 100dvh;
+  }
+  .wrap {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 28px 20px 48px;
+  }
+  header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    margin: 0 0 6px;
+  }
+  header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .stage {
+    display: grid;
+    grid-template-columns: auto minmax(240px, 1fr);
+    gap: 28px;
+    margin-top: 28px;
+    align-items: start;
+  }
+  .well {
+    background: var(--well);
+    border: 1px solid var(--line);
+    padding: 8px;
+    width: calc(10 * (var(--cell) + var(--gap)) + 16px - var(--gap));
+  }
+  .board {
+    display: grid;
+    grid-template-columns: repeat(10, var(--cell));
+    grid-template-rows: repeat(20, var(--cell));
+    gap: var(--gap);
+  }
+  .cell {
+    background: #10141c;
+    border-radius: 2px;
+  }
+  .cell.on { box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+  .cell.ghost { outline: 1px dashed rgba(126,224,200,.55); outline-offset: -1px; background: transparent; }
+  .I { background: #5eead4; }
+  .O { background: #f5c518; }
+  .T { background: #c084fc; }
+  .S { background: #4ade80; }
+  .Z { background: #f87171; }
+  .J { background: #60a5fa; }
+  .L { background: #fb923c; }
+  .hud { display: grid; gap: 14px; }
+  .statgrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .stat {
+    border: 1px solid var(--line);
+    padding: 8px 10px;
+  }
+  .stat b { display: block; font-size: 18px; font-weight: 600; }
+  .stat span { color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+  .pick {
+    border: 1px solid var(--line);
+    padding: 12px;
+  }
+  .pick .letter {
+    font-size: 42px;
+    line-height: 1;
+    font-weight: 600;
+  }
+  .pick .letter.dev { color: var(--warn); }
+  .bars { margin-top: 10px; display: grid; gap: 6px; }
+  .barrow { display: grid; grid-template-columns: 16px 1fr 44px; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+  .track { height: 6px; background: #151a24; }
+  .fill { height: 100%; background: var(--accent); }
+  .fill.alt { background: var(--warn); }
+  .note { color: var(--muted); font-size: 12px; line-height: 1.55; }
+  .controls {
+    margin-top: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  button {
+    font: inherit;
+    color: var(--bg);
+    background: var(--accent);
+    border: 0;
+    padding: 10px 14px;
+    min-height: 44px;
+    cursor: pointer;
+  }
+  button.ghost {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--line);
+  }
+  input[type=range] { width: 140px; accent-color: var(--accent); }
+  .timeline { width: 100%; margin-top: 8px; }
+  footer { margin-top: 28px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+  @media (max-width: 720px) {
+    :root { --cell: 18px; }
+    .stage { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cell { transition: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>JEV PLAYS TETRIS</h1>
+      <p>TypeSafe Jev · seed 20260920 · 50 块 · 2300 分 · 16 行 · 终局 0 洞。代码管物理，Jev 只在启发式 top-4 里选 A–D。这是录播，不含 API key。</p>
+    </header>
+    <div class="stage">
+      <div>
+        <div class="well"><div class="board" id="board"></div></div>
+        <div class="controls">
+          <button id="toggle" type="button">暂停</button>
+          <button class="ghost" id="restart" type="button">重来</button>
+          <label class="note">速度 <input id="speed" type="range" min="120" max="1200" value="420"></label>
+        </div>
+        <input class="timeline" id="seek" type="range" min="0" max="50" value="0">
+      </div>
+      <div class="hud">
+        <div class="statgrid">
+          <div class="stat"><span>Step</span><b id="step">0 / 50</b></div>
+          <div class="stat"><span>Score</span><b id="score">0</b></div>
+          <div class="stat"><span>Lines</span><b id="lines">0</b></div>
+          <div class="stat"><span>Holes</span><b id="holes">0</b></div>
+          <div class="stat"><span>Height</span><b id="height">0</b></div>
+          <div class="stat"><span>Jev ms</span><b id="ms">—</b></div>
+        </div>
+        <div class="pick">
+          <div class="note" id="pieceLine">等待开局</div>
+          <div class="letter" id="letter">·</div>
+          <div class="note" id="devNote"></div>
+          <div class="bars" id="bars"></div>
+        </div>
+        <p class="note">A 永远是 El-Tetris 启发式第一名。这局 Jev 选了 40 次 A，偏了 10 次。同种子永远选 A 是 2600 / 19 行 / 高 2。</p>
+      </div>
+    </div>
+    <footer>
+      公开回放页。没有 TypeSafe key，也不会再打云端。打开即自动播。
+    </footer>
+  </div>
+<script>
+const DATA = {"seed":20260920,"score":2300,"lines":16,"pieces":50,"backend":"Jev (TypeSafe cloud)","mean_ms":1246,"tokens":41070,"deviations":10,"frames":[{"i":0,"kind":null,"next":"Z","proposed":null,"executed":null,"cleared":0,"score":0,"lines":0,"confidence":null,"probabilities":{},"holes":0,"height":0,"ms":0,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........",".........."],"ghost":null},{"i":1,"kind":"Z","next":"T","proposed":"A","executed":"A","cleared":0,"score":10,"lines":0,"confidence":0.96,"probabilities":{"B":0.02,"D":0.0,"A":0.98,"C":0.0},"holes":1,"height":2,"ms":1078,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","ZZ........",".ZZ......."],"ghost":[{"c":0,"r":18},{"c":1,"r":18},{"c":1,"r":19},{"c":2,"r":19}]},{"i":2,"kind":"J","next":"O","proposed":"B","executed":"B","cleared":0,"score":20,"lines":0,"confidence":0.51,"probabilities":{"B":0.63,"A":0.34,"D":0.0,"C":0.03},"holes":1,"height":2,"ms":1100,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","ZZ.J......",".ZZJJJ...."],"ghost":[{"c":3,"r":18},{"c":3,"r":19},{"c":4,"r":19},{"c":5,"r":19}]},{"i":3,"kind":"T","next":"S","proposed":"A","executed":"A","cleared":0,"score":30,"lines":0,"confidence":0.71,"probabilities":{"D":0.22,"C":0.0,"B":0.0,"A":0.78},"holes":1,"height":3,"ms":1047,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........",".TTT......","ZZTJ......",".ZZJJJ...."],"ghost":[{"c":1,"r":17},{"c":2,"r":17},{"c":3,"r":17},{"c":2,"r":18}]},{"i":4,"kind":"O","next":"L","proposed":"A","executed":"A","cleared":0,"score":40,"lines":0,"confidence":0.99,"probabilities":{"B":0.0,"C":0.0,"D":0.0,"A":1.0},"holes":1,"height":3,"ms":1033,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........",".TTTOO....","ZZTJOO....",".ZZJJJ...."],"ghost":[{"c":4,"r":17},{"c":5,"r":17},{"c":4,"r":18},{"c":5,"r":18}]},{"i":5,"kind":"S","next":"I","proposed":"A","executed":"A","cleared":0,"score":50,"lines":0,"confidence":0.96,"probabilities":{"C":0.01,"D":0.0,"A":0.98,"B":0.01},"holes":2,"height":3,"ms":1040,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........",".TTTOOS...","ZZTJOOSS..",".ZZJJJ.S.."],"ghost":[{"c":6,"r":17},{"c":6,"r":18},{"c":7,"r":18},{"c":7,"r":19}]},{"i":6,"kind":"L","next":"T","proposed":"B","executed":"B","cleared":0,"score":60,"lines":0,"confidence":0.98,"probabilities":{"D":0.0,"A":0.01,"C":0.0,"B":0.99},"holes":2,"height":3,"ms":2117,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........",".TTTOOSLL.","ZZTJOOSSL.",".ZZJJJ.SL."],"ghost":[{"c":7,"r":17},{"c":8,"r":17},{"c":8,"r":18},{"c":8,"r":19}]},{"i":7,"kind":"I","next":"O","proposed":"A","executed":"A","cleared":1,"score":170,"lines":1,"confidence":1.0,"probabilities":{"A":1.0,"C":0.0,"B":0.0,"D":0.0},"holes":1,"height":3,"ms":1490,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........",".........I",".TTTOOSLLI",".ZZJJJ.SLI"],"ghost":[{"c":9,"r":16},{"c":9,"r":17},{"c":9,"r":18},{"c":9,"r":19}]},{"i":8,"kind":"T","next":"S","proposed":"A","executed":"A","cleared":1,"score":280,"lines":2,"confidence":0.99,"probabilities":{"C":0.0,"D":0.0,"B":0.01,"A":0.99},"holes":1,"height":3,"ms":1057,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","T.........","TT.......I",".ZZJJJ.SLI"],"ghost":[{"c":0,"r":16},{"c":0,"r":17},{"c":1,"r":17},{"c":0,"r":18}]},{"i":9,"kind":"O","next":"L","proposed":"A","executed":"A","cleared":0,"score":290,"lines":2,"confidence":0.7,"probabilities":{"A":0.78,"D":0.0,"B":0.22,"C":0.0},"holes":1,"height":3,"ms":1021,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","T.OO......","TTOO.....I",".ZZJJJ.SLI"],"ghost":[{"c":2,"r":17},{"c":3,"r":17},{"c":2,"r":18},{"c":3,"r":18}]},{"i":10,"kind":"S","next":"I","proposed":"B","executed":"B","cleared":0,"score":300,"lines":2,"confidence":0.66,"probabilities":{"B":0.75,"D":0.0,"C":0.05,"A":0.2},"holes":1,"height":3,"ms":998,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","T.OO....SS","TTOO...SSI",".ZZJJJ.SLI"],"ghost":[{"c":8,"r":17},{"c":9,"r":17},{"c":7,"r":18},{"c":8,"r":18}]},{"i":11,"kind":"L","next":"Z","proposed":"B","executed":"B","cleared":0,"score":310,"lines":2,"confidence":0.35,"probabilities":{"A":0.47,"B":0.51,"C":0.02,"D":0.0},"holes":1,"height":4,"ms":1099,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........",".LLL......","TLOO....SS","TTOO...SSI",".ZZJJJ.SLI"],"ghost":[{"c":1,"r":16},{"c":2,"r":16},{"c":3,"r":16},{"c":1,"r":17}]},{"i":12,"kind":"I","next":"J","proposed":"A","executed":"A","cleared":1,"score":420,"lines":3,"confidence":1.0,"probabilities":{"A":1.0,"B":0.0,"C":0.0,"D":0.0},"holes":1,"height":3,"ms":1362,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........",".LLL......","TTOO...SSI",".ZZJJJ.SLI"],"ghost":[{"c":4,"r":17},{"c":5,"r":17},{"c":6,"r":17},{"c":7,"r":17}]},{"i":13,"kind":"Z","next":"J","proposed":"A","executed":"A","cleared":0,"score":430,"lines":3,"confidence":0.82,"probabilities":{"C":0.05,"D":0.04,"A":0.87,"B":0.04},"holes":1,"height":5,"ms":1019,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........",".Z........","ZZ........","ZLLL......","TTOO...SSI",".ZZJJJ.SLI"],"ghost":[{"c":1,"r":15},{"c":0,"r":16},{"c":1,"r":16},{"c":0,"r":17}]},{"i":14,"kind":"J","next":"T","proposed":"A","executed":"A","cleared":1,"score":540,"lines":4,"confidence":0.99,"probabilities":{"A":0.99,"B":0.01,"D":0.0,"C":0.0},"holes":1,"height":4,"ms":1015,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........",".Z........","ZZ........","ZLLL......",".ZZJJJJSLI"],"ghost":[{"c":4,"r":18},{"c":5,"r":18},{"c":6,"r":18},{"c":6,"r":19}]},{"i":15,"kind":"J","next":"Z","proposed":"A","executed":"A","cleared":0,"score":550,"lines":4,"confidence":0.99,"probabilities":{"C":0.0,"A":1.0,"B":0.0,"D":0.0},"holes":1,"height":4,"ms":1010,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........",".Z........","ZZJJJ.....","ZLLLJ.....",".ZZJJJJSLI"],"ghost":[{"c":2,"r":17},{"c":3,"r":17},{"c":4,"r":17},{"c":4,"r":18}]},{"i":16,"kind":"T","next":"S","proposed":"C","executed":"C","cleared":0,"score":560,"lines":4,"confidence":0.67,"probabilities":{"A":0.19,"B":0.04,"D":0.02,"C":0.75},"holes":1,"height":4,"ms":1016,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........",".Z........","ZZJJJ.T...","ZLLLJTTT..",".ZZJJJJSLI"],"ghost":[{"c":6,"r":17},{"c":5,"r":18},{"c":6,"r":18},{"c":7,"r":18}]},{"i":17,"kind":"Z","next":"O","proposed":"A","executed":"A","cleared":1,"score":670,"lines":5,"confidence":1.0,"probabilities":{"D":0.0,"A":1.0,"C":0.0,"B":0.0},"holes":1,"height":3,"ms":1020,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........",".Z........","ZZJJJ.TZZ.",".ZZJJJJSLI"],"ghost":[{"c":7,"r":17},{"c":8,"r":17},{"c":8,"r":18},{"c":9,"r":18}]},{"i":18,"kind":"S","next":"I","proposed":"A","executed":"A","cleared":0,"score":680,"lines":5,"confidence":0.63,"probabilities":{"C":0.0,"A":0.73,"D":0.0,"B":0.27},"holes":1,"height":4,"ms":1064,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","....S.....",".Z..SS....","ZZJJJSTZZ.",".ZZJJJJSLI"],"ghost":[{"c":4,"r":16},{"c":4,"r":17},{"c":5,"r":17},{"c":5,"r":18}]},{"i":19,"kind":"O","next":"L","proposed":"A","executed":"A","cleared":0,"score":690,"lines":5,"confidence":1.0,"probabilities":{"A":1.0,"C":0.0,"D":0.0,"B":0.0},"holes":1,"height":4,"ms":1149,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..OOS.....",".ZOOSS....","ZZJJJSTZZ.",".ZZJJJJSLI"],"ghost":[{"c":2,"r":16},{"c":3,"r":16},{"c":2,"r":17},{"c":3,"r":17}]},{"i":20,"kind":"I","next":"I","proposed":"A","executed":"A","cleared":1,"score":800,"lines":6,"confidence":0.99,"probabilities":{"D":0.0,"A":1.0,"C":0.0,"B":0.0},"holes":0,"height":4,"ms":1044,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........",".........I","..OOS....I",".ZOOSS...I",".ZZJJJJSLI"],"ghost":[{"c":9,"r":15},{"c":9,"r":16},{"c":9,"r":17},{"c":9,"r":18}]},{"i":21,"kind":"L","next":"O","proposed":"A","executed":"A","cleared":0,"score":810,"lines":6,"confidence":0.99,"probabilities":{"A":1.0,"D":0.0,"C":0.0,"B":0.0},"holes":0,"height":4,"ms":1055,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........",".........I","..OOS...LI",".ZOOSSLLLI",".ZZJJJJSLI"],"ghost":[{"c":8,"r":17},{"c":6,"r":18},{"c":7,"r":18},{"c":8,"r":18}]},{"i":22,"kind":"I","next":"T","proposed":"A","executed":"A","cleared":2,"score":1120,"lines":8,"confidence":1.0,"probabilities":{"A":1.0,"C":0.0,"B":0.0,"D":0.0},"holes":0,"height":2,"ms":1253,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","I........I","I.OOS...LI"],"ghost":[{"c":0,"r":16},{"c":0,"r":17},{"c":0,"r":18},{"c":0,"r":19}]},{"i":23,"kind":"O","next":"S","proposed":"A","executed":"A","cleared":0,"score":1130,"lines":8,"confidence":0.67,"probabilities":{"D":0.0,"C":0.0,"A":0.76,"B":0.24},"holes":0,"height":2,"ms":1631,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","I....OO..I","I.OOSOO.LI"],"ghost":[{"c":5,"r":18},{"c":6,"r":18},{"c":5,"r":19},{"c":6,"r":19}]},{"i":24,"kind":"T","next":"L","proposed":"A","executed":"A","cleared":0,"score":1140,"lines":8,"confidence":0.99,"probabilities":{"A":1.0,"D":0.0,"C":0.0,"B":0.0},"holes":0,"height":3,"ms":1101,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........",".......T..","I....OOTTI","I.OOSOOTLI"],"ghost":[{"c":7,"r":17},{"c":7,"r":18},{"c":8,"r":18},{"c":7,"r":19}]},{"i":25,"kind":"S","next":"J","proposed":"A","executed":"A","cleared":0,"score":1150,"lines":8,"confidence":0.99,"probabilities":{"D":0.0,"B":0.01,"C":0.0,"A":0.99},"holes":0,"height":3,"ms":1998,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","....SS.T..","I..SSOOTTI","I.OOSOOTLI"],"ghost":[{"c":4,"r":17},{"c":5,"r":17},{"c":3,"r":18},{"c":4,"r":18}]},{"i":26,"kind":"L","next":"Z","proposed":"A","executed":"A","cleared":1,"score":1260,"lines":9,"confidence":1.0,"probabilities":{"D":0.0,"B":0.0,"C":0.0,"A":1.0},"holes":0,"height":2,"ms":2051,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","LL..SS.T..","IL.SSOOTTI"],"ghost":[{"c":0,"r":17},{"c":1,"r":17},{"c":1,"r":18},{"c":1,"r":19}]},{"i":27,"kind":"J","next":"S","proposed":"B","executed":"B","cleared":0,"score":1270,"lines":9,"confidence":0.34,"probabilities":{"B":0.51,"C":0.02,"A":0.47,"D":0.0},"holes":0,"height":3,"ms":1016,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","....JJJ...","LL..SSJT..","IL.SSOOTTI"],"ghost":[{"c":4,"r":17},{"c":5,"r":17},{"c":6,"r":17},{"c":6,"r":18}]},{"i":28,"kind":"Z","next":"L","proposed":"A","executed":"A","cleared":1,"score":1380,"lines":10,"confidence":1.0,"probabilities":{"A":1.0,"D":0.0,"B":0.0,"C":0.0},"holes":0,"height":2,"ms":1035,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","...ZJJJ...","LLZZSSJT.."],"ghost":[{"c":3,"r":17},{"c":2,"r":18},{"c":3,"r":18},{"c":2,"r":19}]},{"i":29,"kind":"S","next":"Z","proposed":"A","executed":"A","cleared":0,"score":1390,"lines":10,"confidence":0.67,"probabilities":{"B":0.24,"C":0.0,"A":0.76,"D":0.0},"holes":0,"height":3,"ms":1014,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..SS......",".SSZJJJ...","LLZZSSJT.."],"ghost":[{"c":2,"r":17},{"c":3,"r":17},{"c":1,"r":18},{"c":2,"r":18}]},{"i":30,"kind":"L","next":"O","proposed":"A","executed":"A","cleared":1,"score":1500,"lines":11,"confidence":0.97,"probabilities":{"A":0.98,"B":0.01,"D":0.0,"C":0.01},"holes":0,"height":2,"ms":3066,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..SS....L.",".SSZJJJ.L."],"ghost":[{"c":8,"r":17},{"c":8,"r":18},{"c":8,"r":19},{"c":9,"r":19}]},{"i":31,"kind":"Z","next":"J","proposed":"A","executed":"A","cleared":0,"score":1510,"lines":11,"confidence":0.95,"probabilities":{"A":0.96,"C":0.0,"B":0.04,"D":0.0},"holes":0,"height":3,"ms":1073,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........",".Z........","ZZSS....L.","ZSSZJJJ.L."],"ghost":[{"c":1,"r":17},{"c":0,"r":18},{"c":1,"r":18},{"c":0,"r":19}]},{"i":32,"kind":"O","next":"T","proposed":"B","executed":"B","cleared":0,"score":1520,"lines":11,"confidence":0.98,"probabilities":{"A":0.01,"C":0.01,"B":0.98,"D":0.0},"holes":0,"height":3,"ms":1981,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........",".Z..OO....","ZZSSOO..L.","ZSSZJJJ.L."],"ghost":[{"c":4,"r":17},{"c":5,"r":17},{"c":4,"r":18},{"c":5,"r":18}]},{"i":33,"kind":"J","next":"I","proposed":"A","executed":"A","cleared":0,"score":1530,"lines":11,"confidence":0.99,"probabilities":{"A":1.0,"B":0.0,"C":0.0,"D":0.0},"holes":0,"height":3,"ms":1008,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........",".Z..OO.JJ.","ZZSSOO.JL.","ZSSZJJJJL."],"ghost":[{"c":7,"r":17},{"c":8,"r":17},{"c":7,"r":18},{"c":7,"r":19}]},{"i":34,"kind":"T","next":"T","proposed":"A","executed":"A","cleared":0,"score":1540,"lines":11,"confidence":0.95,"probabilities":{"C":0.0,"A":0.97,"D":0.01,"B":0.02},"holes":0,"height":5,"ms":1000,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","T.........","TT........","TZ..OO.JJ.","ZZSSOO.JL.","ZSSZJJJJL."],"ghost":[{"c":0,"r":15},{"c":0,"r":16},{"c":1,"r":16},{"c":0,"r":17}]},{"i":35,"kind":"I","next":"S","proposed":"A","executed":"A","cleared":1,"score":1650,"lines":12,"confidence":0.99,"probabilities":{"B":0.01,"C":0.0,"A":0.99,"D":0.0},"holes":0,"height":4,"ms":991,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","T.........","TT.......I","TZ..OO.JJI","ZZSSOO.JLI"],"ghost":[{"c":9,"r":16},{"c":9,"r":17},{"c":9,"r":18},{"c":9,"r":19}]},{"i":36,"kind":"T","next":"O","proposed":"D","executed":"D","cleared":0,"score":1660,"lines":12,"confidence":0.65,"probabilities":{"A":0.08,"D":0.73,"C":0.09,"B":0.1},"holes":0,"height":5,"ms":1069,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","........T.","T.......TT","TT......TI","TZ..OO.JJI","ZZSSOO.JLI"],"ghost":[{"c":8,"r":15},{"c":8,"r":16},{"c":9,"r":16},{"c":8,"r":17}]},{"i":37,"kind":"S","next":"J","proposed":"A","executed":"A","cleared":0,"score":1670,"lines":12,"confidence":1.0,"probabilities":{"A":1.0,"D":0.0,"C":0.0,"B":0.0},"holes":0,"height":5,"ms":2045,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","........T.","T.......TT","TT.SS...TI","TZSSOO.JJI","ZZSSOO.JLI"],"ghost":[{"c":3,"r":17},{"c":4,"r":17},{"c":2,"r":18},{"c":3,"r":18}]},{"i":38,"kind":"O","next":"L","proposed":"A","executed":"A","cleared":0,"score":1680,"lines":12,"confidence":0.92,"probabilities":{"A":0.95,"B":0.03,"C":0.02,"D":0.0},"holes":0,"height":5,"ms":1029,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","...OO...T.","T..OO...TT","TT.SS...TI","TZSSOO.JJI","ZZSSOO.JLI"],"ghost":[{"c":3,"r":15},{"c":4,"r":15},{"c":3,"r":16},{"c":4,"r":16}]},{"i":39,"kind":"J","next":"I","proposed":"A","executed":"A","cleared":2,"score":1990,"lines":14,"confidence":1.0,"probabilities":{"B":0.0,"C":0.0,"D":0.0,"A":1.0},"holes":0,"height":3,"ms":997,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","...OO...T.","T..OO...TT","TT.SS.JJTI"],"ghost":[{"c":6,"r":17},{"c":7,"r":17},{"c":6,"r":18},{"c":6,"r":19}]},{"i":40,"kind":"L","next":"Z","proposed":"A","executed":"A","cleared":0,"score":2000,"lines":14,"confidence":1.0,"probabilities":{"A":1.0,"C":0.0,"D":0.0,"B":0.0},"holes":0,"height":3,"ms":1439,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","...OO...T.","T..OOLLLTT","TT.SSLJJTI"],"ghost":[{"c":5,"r":18},{"c":6,"r":18},{"c":7,"r":18},{"c":5,"r":19}]},{"i":41,"kind":"I","next":"I","proposed":"A","executed":"A","cleared":1,"score":2110,"lines":15,"confidence":1.0,"probabilities":{"A":1.0,"D":0.0,"C":0.0,"B":0.0},"holes":0,"height":3,"ms":1289,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..I.......","..IOO...T.","T.IOOLLLTT"],"ghost":[{"c":2,"r":16},{"c":2,"r":17},{"c":2,"r":18},{"c":2,"r":19}]},{"i":42,"kind":"Z","next":"O","proposed":"B","executed":"B","cleared":0,"score":2120,"lines":15,"confidence":0.98,"probabilities":{"B":0.99,"C":0.0,"D":0.0,"A":0.01},"holes":0,"height":3,"ms":1035,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..I.ZZ....","..IOOZZ.T.","T.IOOLLLTT"],"ghost":[{"c":4,"r":17},{"c":5,"r":17},{"c":5,"r":18},{"c":6,"r":18}]},{"i":43,"kind":"I","next":"T","proposed":"A","executed":"A","cleared":1,"score":2230,"lines":16,"confidence":0.99,"probabilities":{"C":0.0,"A":1.0,"D":0.0,"B":0.0},"holes":0,"height":3,"ms":1226,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........",".I........",".II.ZZ....",".IIOOZZ.T."],"ghost":[{"c":1,"r":16},{"c":1,"r":17},{"c":1,"r":18},{"c":1,"r":19}]},{"i":44,"kind":"O","next":"S","proposed":"A","executed":"A","cleared":0,"score":2240,"lines":16,"confidence":0.78,"probabilities":{"A":0.83,"B":0.01,"C":0.15,"D":0.01},"holes":0,"height":4,"ms":992,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","....OO....",".I..OO....",".II.ZZ....",".IIOOZZ.T."],"ghost":[{"c":4,"r":16},{"c":5,"r":16},{"c":4,"r":17},{"c":5,"r":17}]},{"i":45,"kind":"T","next":"Z","proposed":"A","executed":"A","cleared":0,"score":2250,"lines":16,"confidence":0.98,"probabilities":{"D":0.0,"C":0.0,"B":0.02,"A":0.98},"holes":0,"height":4,"ms":999,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","...TOO....",".ITTOO....",".IITZZ....",".IIOOZZ.T."],"ghost":[{"c":3,"r":16},{"c":2,"r":17},{"c":3,"r":17},{"c":3,"r":18}]},{"i":46,"kind":"S","next":"L","proposed":"A","executed":"A","cleared":0,"score":2260,"lines":16,"confidence":1.0,"probabilities":{"A":1.0,"B":0.0,"C":0.0,"D":0.0},"holes":0,"height":4,"ms":1052,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","...TOO....",".ITTOOS...",".IITZZSS..",".IIOOZZST."],"ghost":[{"c":6,"r":17},{"c":6,"r":18},{"c":7,"r":18},{"c":7,"r":19}]},{"i":47,"kind":"Z","next":"J","proposed":"B","executed":"B","cleared":0,"score":2270,"lines":16,"confidence":0.43,"probabilities":{"A":0.41,"C":0.01,"B":0.58,"D":0.0},"holes":0,"height":6,"ms":999,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","...Z......","..ZZ......","..ZTOO....",".ITTOOS...",".IITZZSS..",".IIOOZZST."],"ghost":[{"c":3,"r":14},{"c":2,"r":15},{"c":3,"r":15},{"c":2,"r":16}]},{"i":48,"kind":"L","next":"J","proposed":"A","executed":"A","cleared":0,"score":2280,"lines":16,"confidence":0.29,"probabilities":{"B":0.39,"D":0.03,"A":0.47,"C":0.11},"holes":0,"height":7,"ms":944,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","....L.....","...ZL.....","..ZZLL....","..ZTOO....",".ITTOOS...",".IITZZSS..",".IIOOZZST."],"ghost":[{"c":4,"r":13},{"c":4,"r":14},{"c":4,"r":15},{"c":5,"r":15}]},{"i":49,"kind":"J","next":"T","proposed":"A","executed":"A","cleared":0,"score":2290,"lines":16,"confidence":0.98,"probabilities":{"B":0.01,"D":0.0,"C":0.0,"A":0.99},"holes":0,"height":7,"ms":2108,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","....L.....",".JJZL.....",".JZZLL....",".JZTOO....",".ITTOOS...",".IITZZSS..",".IIOOZZST."],"ghost":[{"c":1,"r":14},{"c":2,"r":14},{"c":1,"r":15},{"c":1,"r":16}]},{"i":50,"kind":"J","next":"L","proposed":"A","executed":"A","cleared":0,"score":2300,"lines":16,"confidence":0.99,"probabilities":{"C":0.0,"A":1.0,"B":0.0,"D":0.0},"holes":0,"height":8,"ms":1015,"board":["..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........","..........",".J........",".JJJL.....",".JJZL.....",".JZZLL....",".JZTOO....",".ITTOOS...",".IITZZSS..",".IIOOZZST."],"ghost":[{"c":1,"r":12},{"c":1,"r":13},{"c":2,"r":13},{"c":3,"r":13}]}]};
+const boardEl = document.getElementById("board");
+const cells = [];
+for (let i = 0; i < 200; i++) {
+  const d = document.createElement("div");
+  d.className = "cell";
+  boardEl.appendChild(d);
+  cells.push(d);
+}
+let idx = 0, timer = null, playing = true;
+function paint(i) {
+  const f = DATA.frames[i];
+  const ghost = new Set((f.ghost || []).map(g => g.r + "," + g.c));
+  for (let r = 0; r < 20; r++) {
+    const row = f.board[r];
+    for (let c = 0; c < 10; c++) {
+      const el = cells[r * 10 + c];
+      const k = row[c];
+      el.className = "cell" + (k !== "." ? " on " + k : "") + (ghost.has(r + "," + c) && k !== "." ? " ghost" : "");
+    }
+  }
+  document.getElementById("step").textContent = f.i + " / 50";
+  document.getElementById("score").textContent = f.score;
+  document.getElementById("lines").textContent = f.lines;
+  document.getElementById("holes").textContent = f.holes;
+  document.getElementById("height").textContent = f.height;
+  document.getElementById("ms").textContent = f.ms ? f.ms : "—";
+  document.getElementById("seek").value = String(f.i);
+  const letter = document.getElementById("letter");
+  const executed = f.executed || "·";
+  letter.textContent = executed;
+  letter.className = "letter" + (executed !== "A" && executed !== "·" ? " dev" : "");
+  document.getElementById("pieceLine").textContent = f.kind
+    ? ("块 " + f.kind + (f.next ? "  → next " + f.next : "") + (f.cleared ? "  消 " + f.cleared : ""))
+    : "空板开局";
+  document.getElementById("devNote").textContent =
+    executed !== "A" && executed !== "·" ? "Jev 没选启发式第一名 A" : "";
+  const bars = document.getElementById("bars");
+  bars.innerHTML = "";
+  const probs = f.probabilities || {};
+  ["A","B","C","D"].forEach(lab => {
+    if (probs[lab] == null) return;
+    const pct = Math.round(probs[lab] * 100);
+    const row = document.createElement("div");
+    row.className = "barrow";
+    row.innerHTML = "<span>"+lab+"</span><div class='track'><div class='fill"+(lab===executed?"":" alt")+"' style='width:"+pct+"%'></div></div><span>"+pct+"%</span>";
+    bars.appendChild(row);
+  });
+}
+function tick() {
+  if (idx >= DATA.frames.length - 1) { stop(); return; }
+  idx += 1;
+  paint(idx);
+}
+function play() {
+  playing = true;
+  document.getElementById("toggle").textContent = "暂停";
+  clearInterval(timer);
+  timer = setInterval(tick, Number(document.getElementById("speed").value));
+}
+function stop() {
+  playing = false;
+  document.getElementById("toggle").textContent = "播放";
+  clearInterval(timer);
+  timer = null;
+}
+document.getElementById("toggle").onclick = () => playing ? stop() : (idx >= DATA.frames.length-1 ? (idx=0, paint(0), play()) : play());
+document.getElementById("restart").onclick = () => { idx = 0; paint(0); play(); };
+document.getElementById("speed").oninput = () => { if (playing) play(); };
+document.getElementById("seek").oninput = (e) => { idx = Number(e.target.value); paint(idx); };
+paint(0);
+play();
+</script>
+</body>
+</html>
